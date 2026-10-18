@@ -101,21 +101,20 @@ if(WIN32)
     set(CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL ON)
     set(CPACK_NSIS_DEFINES "RequestExecutionLevel admin")
     # FL Studio (and every other host) scans the standard VST3 folder. Copy the bundle there.
+    # NOTE: CPack writes these values verbatim inside "..." in CPackConfig.cmake, so backslashes
+    # are doubled (\\) and quotes escaped (\") here. NSIS finally sees single backslashes.
     set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS [=[
-      SetRegView 64
-      CreateDirectory "$COMMONFILES64\VST3"
-      RMDir /r "$COMMONFILES64\VST3\ATLAS.vst3"
-      nsExec::Exec 'xcopy /E /I /Y /Q "$INSTDIR\vst3\ATLAS.vst3" "$COMMONFILES64\VST3\ATLAS.vst3"'
-      Pop $0
-      StrCmp $0 "0" +2 0
-        MessageBox MB_OK|MB_ICONEXCLAMATION "Could not copy ATLAS.vst3 to $COMMONFILES64\VST3 (code $0)."
-    ]=])
+SetRegView 64
+CreateDirectory $COMMONFILES64\\VST3
+RMDir /r $COMMONFILES64\\VST3\\ATLAS.vst3
+nsExec::Exec 'xcopy /E /I /Y /Q \"$INSTDIR\\vst3\\ATLAS.vst3\" \"$COMMONFILES64\\VST3\\ATLAS.vst3\"'
+Pop $0
+]=])
     set(CPACK_NSIS_EXTRA_UNINSTALL_COMMANDS [=[
-      SetRegView 64
-      RMDir /r "$COMMONFILES64\VST3\ATLAS.vst3"
-    ]=])
+SetRegView 64
+RMDir /r $COMMONFILES64\\VST3\\ATLAS.vst3
+]=])
 else()
     set(CPACK_GENERATOR "TGZ")
 endif()
 include(CPack)
-
