@@ -1,0 +1,70 @@
+name: Build
+
+on:
+  push:
+    branches: [master, main]
+    tags: ["v*"]
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install NSIS
+        shell: pwsh
+        run: |
+          choco install nsis -y --no-progress
+          "C:\Program Files (x86)\NSIS" | Out-File -FilePath $env:GITHUB_PATH -Encoding utf8 -Append
+
+      - name: Configure
+        run: cmake -S . -B build -A x64
+
+      - name: Build
+        run: cmake --build build --config Release
+
+      - name: Test
+        run: ctest --test-dir build -C Release --output-on-failure
+
+      - name: Package (installer + ZIP)
+        run: cmake --build build --config Release --target package
+
+      - name: Show packages
+        if: always()
+        shell: pwsh
+        run: Get-ChildItem -Recurse -File -Include 'ATLAS-*-setup.exe','ATLAS-*-setup.zip' | ForEach-Object { "$($_.FullName)  $($_.Length) bytes" }
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ATLAS-Windows
+          path: |
+            build/ATLAS-*-setup.exe
+            build/ATLAS-*-setup.zip
+            ATLAS-*-setup.exe
+            ATLAS-*-setup.zip
+          if-no-files-found: error
+
+      - name: Publish release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            build/ATLAS-*-setup.exe
+            build/ATLAS-*-setup.zip
+
+  linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build, test, package
+        run: |
+          cmake -S . -B build -DCMAKE_BUILD_TYPE=Release
+          cmake --build build
+          ctest --test-dir build --output-on-failure
+          cmake --build build --target package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ATLAS-Linux
+          path: build/ATLAS-*-setup.tar.gz
